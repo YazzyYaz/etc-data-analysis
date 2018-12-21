@@ -14,13 +14,31 @@ from eth_utils import (
 )
 from eth_hash.auto import keccak
 
-from eth import constants, Chain
+from trinity.protocol.common.context import ChainContext
+from trinity.protocol.les.peer import LESPeerPool
+from trinity.sync.light.chain import LightChainSyncer
+from trinity.sync.light.service import LightPeerChain
+from trinity.protocol.les.servers import LightRequestServer
+
+from trinity import constants
+from eth import Chain
+from eth.constants import GENESIS_BLOCK_NUMBER
 from eth.vm.forks.frontier import FrontierVM
 from eth.vm.forks.homestead import HomesteadVM
 from eth.chains.mainnet import HOMESTEAD_MAINNET_BLOCK
 from eth.db.atomic import AtomicDB
 from eth.chains.mainnet import MAINNET_GENESIS_HEADER
 from web3 import Web3, HTTPProvider
+
+from p2p import ecies
+from p2p.kademlia import Node
+
+from tests.trinity.core.integration_test_helpers import (
+    FakeAsyncChainDB,
+    FakeAsyncMainnetChain,
+    FakeAsyncHeaderDB,
+    connect_to_peers_loop,
+)
 
 
 @pytest.fixture
@@ -50,7 +68,7 @@ def wait_for_socket(ipc_path, timeout=10):
 
 @pytest.fixture
 def geth_ipc_path(geth_datadir):
-    return geth_datadir / 'geth.ipc'
+    return '/home/admin/.ethereum-classic/mainnet/geth.ipc' 
 
 @pytest.fixture
 def geth_process(geth_command_arguments):
@@ -78,7 +96,7 @@ def geth_process(geth_command_arguments):
         )
 
 @pytest.mark.asyncio
-async def test_etc_node(event_loop, dao_hex_byte, dao_block_number, enode):
+async def test_etc_node(event_loop, request, dao_hex_byte, dao_block_number, enode):
     remote = Node.from_uri(enode)
     base_db = AtomicDB()
     chaindb = FakeAsyncChainDB(base_db)
@@ -88,7 +106,7 @@ async def test_etc_node(event_loop, dao_hex_byte, dao_block_number, enode):
         headerdb=headerdb,
         network_id=constants.MAINNET_NETWORK_ID,
         vm_configuration=(
-            (constants.GENESIS_BLOCK_NUMBER, FrontierVM),
+            (GENESIS_BLOCK_NUMBER, FrontierVM),
             (HOMESTEAD_MAINNET_BLOCK, HomesteadVM),
         ),
     )
@@ -123,7 +141,7 @@ async def test_etc_node(event_loop, dao_hex_byte, dao_block_number, enode):
     async def wait_for_header_sync(block_number):
         while headerdb.get_canonical_head().block_number < block_number:
             await asyncio.sleep(0.1)
-    await asyncio.wait_for(wait_for_header_sync(n), 5)
+    await asyncio.wait_for(wait_for_header_sync(n), None)
 
     header = headerdb.get_canonical_block_header_by_number(n)
     body = await peer_chain.coro_get_block_body_by_hash(header.hash)
