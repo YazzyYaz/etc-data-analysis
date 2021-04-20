@@ -46,7 +46,7 @@ pluggy==0.8.0
 plyvel==1.0.5
 prompt-toolkit==1.0.15
 ptyprocess==0.6.0
-py==1.7.0
+py==1.10.0
 py-ecc==1.4.7
 py-eth==0.1.1
 py-evm==0.2.0a37
